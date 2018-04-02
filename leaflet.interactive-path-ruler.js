@@ -10,6 +10,8 @@
         _rulerRouteVertices: [],
         _rulerRouteLine: null,
 
+        _dragEndTime: null,
+
         options: {
             buttonIconOff: '<span>R</span>',
             buttonIconOn: '<span>R</span>',
@@ -25,6 +27,7 @@
 
         initialize: function (map, options) {
             this._map = map;
+            this._dragEndTime = (new Date()).getTime();
 
             if (options) {
                 L.Util.setOptions(this, options);
@@ -37,6 +40,7 @@
                     icon: this.options.buttonIconOff,
                     title: this.options.buttonTitleOff,
                     onClick: function (control, map) {
+                        self._removeMapObjects();
                         control.button.style.backgroundColor = self.options.buttonBackgroundColorOn;
                         control.state('ruler-on');
                     }
@@ -59,9 +63,16 @@
 
         _mapClickHandler: function (ev) {
 
-            // TODO: There is Chrome issue with unwanted map click event on dragend https://github.com/Leaflet/Leaflet/issues/6112 - not fixed nor workaround
+            if ((this._rulerButton._currentState.stateName === 'ruler-on')) {
 
-            if (this._rulerButton._currentState.stateName === 'ruler-on') {
+                // TODO: There is Chrome issue with unwanted map click event on dragend https://github.com/Leaflet/Leaflet/issues/6112 - not fixed
+                // Workaround
+                var now = (new Date()).getTime();
+                var delta = now - this._dragEndTime;
+                if (delta < 50) {
+                    return;
+                }
+
                 var point = ev.latlng;
 
                 var self = this;
@@ -87,6 +98,8 @@
                         if ((e.target._vertexIndex == (self._rulerRouteVertices.length - 1)) || (e.target._wasClicked)) {
                             e.target.openPopup();
                         }
+
+                        self._dragEndTime = (new Date()).getTime();
                     })
                     .on('click', function (e) {
                         e.target._wasClicked = true;
@@ -162,6 +175,8 @@
 
                     routeMarker.openPopup();
                 }
+
+                L.DomEvent.stopPropagation(ev);
             }
         },
 
@@ -170,12 +185,15 @@
                 this._map.removeLayer(this._rulerRouteVertices[i]);
             }
 
-            this._map.removeLayer(this._rulerRouteLine);
-            this._rulerRouteLine = null;
             this._rulerRouteVertices = [];
+
+            if (this._rulerRouteLine) {
+                this._map.removeLayer(this._rulerRouteLine);
+                this._rulerRouteLine = null;
+            }
         },
 
-        // TODO: function for full remove of button and tool
+        // TODO: function for full remove of button and tool with map events unsubscribe
 
         _computeDistance: function (index) {
             var result = 0;

@@ -7,7 +7,7 @@ Check the [demo page](https://htmlpreview.github.io/?https://github.com/apdevelo
 ### Sample usage
 
 Include script file
-```javascript
+```html
 <script src="leaflet.interactive-path-ruler.js" type="text/javascript"></script>
 ```
 
@@ -16,7 +16,7 @@ Assuming that `map` variable is Leaflet map, initialize ruler with optional para
 L.interactivePathRuler(map, {
     buttonIconOff: 'fa-ellipsis-h fa-lg',   // Button icon in 'off' state
     buttonIconOn: 'fa-ellipsis-h fa-lg',	// Button icon in 'on' state
-	buttonTitleOff: 'Turn ruler on',		// Button tooltip text in 'off' state
+    buttonTitleOff: 'Turn ruler on',		// Button tooltip text in 'off' state
     buttonTitleOn: 'Turn ruler off',		// Button tooltip text in 'on' state
     buttonBackgroundColorOff: 'white',		// Button background color in 'off' state
     buttonBackgroundColorOn: 'orange',		// Button background color in 'on' state

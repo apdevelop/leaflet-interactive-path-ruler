@@ -41,6 +41,7 @@
                     title: this.options.buttonTitleOff,
                     onClick: function (control, map) {
                         self._removeMapObjects();
+                        self._map.on('click', self._mapClickHandler, self);
                         control.button.style.backgroundColor = self.options.buttonBackgroundColorOn;
                         control.state('ruler-on');
                     }
@@ -49,6 +50,7 @@
                     icon: this.options.buttonIconOn,
                     title: this.options.buttonTitleOn,
                     onClick: function (control, map) {
+                        self._map.off('click', self._mapClickHandler, self);
                         control.button.style.backgroundColor = self.options.buttonBackgroundColorOff;
                         control.state('ruler-off');
                     }
@@ -56,128 +58,122 @@
             })
                 .addTo(this._map);
 
-            this._map.on('click', this._mapClickHandler, this);
-
             return this._rulerButton;
         },
 
         _mapClickHandler: function (ev) {
+            // TODO: There is Chrome issue with unwanted map click event on dragend https://github.com/Leaflet/Leaflet/issues/6112 - not fixed
+            // Workaround
+            var now = (new Date()).getTime();
+            var delta = now - this._dragEndTime;
+            if (delta < 50) {
+                return;
+            }
 
-            if ((this._rulerButton._currentState.stateName === 'ruler-on')) {
+            var point = ev.latlng;
 
-                // TODO: There is Chrome issue with unwanted map click event on dragend https://github.com/Leaflet/Leaflet/issues/6112 - not fixed
-                // Workaround
-                var now = (new Date()).getTime();
-                var delta = now - this._dragEndTime;
-                if (delta < 50) {
-                    return;
-                }
-
-                var point = ev.latlng;
-
-                var self = this;
-                var routeMarker = L.marker(point, {
-                    icon: L.divIcon({
-                        iconSize: [20, 20]
-                    }),
-                    opacity: 0.8,
-                    draggable: true
+            var self = this;
+            var routeMarker = L.marker(point, {
+                icon: L.divIcon({
+                    iconSize: [20, 20]
+                }),
+                opacity: 0.8,
+                draggable: true
+            })
+                .on('drag', function (e) {
+                    self._updateDistances();
+                    var arr = self._rulerRouteLine.getLatLngs();
+                    arr[e.target._vertexIndex] = e.latlng;
+                    self._rulerRouteLine.setLatLngs(arr);
+                    self._rulerRouteLine.redraw();
+                    L.DomEvent.stopPropagation(e);
                 })
-                    .on('drag', function (e) {
-                        self._updateDistances();
-                        var arr = self._rulerRouteLine.getLatLngs();
-                        arr[e.target._vertexIndex] = e.latlng;
-                        self._rulerRouteLine.setLatLngs(arr);
-                        self._rulerRouteLine.redraw();
-                        L.DomEvent.stopPropagation(e);
-                    })
-                    .on('dragstart', function (e) {
+                .on('dragstart', function (e) {
 
-                    })
-                    .on('dragend', function (e) {
-                        if ((e.target._vertexIndex == (self._rulerRouteVertices.length - 1)) || (e.target._wasClicked)) {
-                            e.target.openPopup();
-                        }
-
-                        self._dragEndTime = (new Date()).getTime();
-                    })
-                    .on('click', function (e) {
-                        e.target._wasClicked = true;
-                        L.DomEvent.stopPropagation(e);
-                    })
-                    .on('dblclick', function (e) {
-                        if (e.target._vertexIndex == 0) {
-                            // Remove entire path when click on first vertex
-                            self._removeMapObjects();
-                        }
-                        else {
-                            // Remove only clicked vertex
-                            var index = e.target._vertexIndex;
-                            self._map.removeLayer(self._rulerRouteVertices[index]);
-                            self._rulerRouteVertices.splice(index, 1);
-
-                            var arr = self._rulerRouteLine.getLatLngs();
-                            arr.splice(index, 1);
-                            self._rulerRouteLine.setLatLngs(arr);
-                            self._rulerRouteLine.redraw();
-
-                            for (var i = 0; i < self._rulerRouteVertices.length; i++) {
-                                self._rulerRouteVertices[i]._vertexIndex = i;
-                            }
-
-                            self._updateDistances();
-                        }
-
-                        L.DomEvent.stopPropagation(e);
-                    });
-
-                this._rulerRouteVertices.push(routeMarker);
-                routeMarker._vertexIndex = this._rulerRouteVertices.length - 1;
-
-                if (this._rulerRouteVertices.length > 1) {
-                    var distance = this._computeDistance(this._rulerRouteVertices.length - 1);
-
-                    var routeMarkerPopup = L.popup({
-                        autoClose: false,
-                        autoPan: false,
-                        closeOnClick: false,
-                        offset: L.point(0, 0),
-                        className: this.options.markerPopupClassName
-                    })
-                        .setContent(this._formatDistance(distance));
-
-                    routeMarker.bindPopup(routeMarkerPopup);
-                }
-
-                if (this._rulerRouteLine == null) {
-                    this._rulerRouteLine = L.polyline([point], {
-                        color: 'red',
-                        weight: 2
-                    })
-                        .on('click', function (e) {
-                            // TODO: add vertex
-                            L.DomEvent.stopPropagation(e);
-                        })
-                        .addTo(this._map);
-                }
-                else {
-                    this._rulerRouteLine.addLatLng(point);
-                }
-
-                routeMarker.addTo(this._map);
-
-                if (this._rulerRouteVertices.length > 1) {
-                    for (var i = 0; i < this._rulerRouteVertices.length - 1; i++) {
-                        if (!this._rulerRouteVertices[i]._wasClicked) {
-                            this._rulerRouteVertices[i].closePopup();
-                        }
+                })
+                .on('dragend', function (e) {
+                    if ((e.target._vertexIndex == (self._rulerRouteVertices.length - 1)) || (e.target._wasClicked)) {
+                        e.target.openPopup();
                     }
 
-                    routeMarker.openPopup();
+                    self._dragEndTime = (new Date()).getTime();
+                })
+                .on('click', function (e) {
+                    e.target._wasClicked = true;
+                    L.DomEvent.stopPropagation(e);
+                })
+                .on('dblclick', function (e) {
+                    if (e.target._vertexIndex == 0) {
+                        // Remove entire path when click on first vertex
+                        self._removeMapObjects();
+                    }
+                    else {
+                        // Remove only clicked vertex
+                        var index = e.target._vertexIndex;
+                        self._map.removeLayer(self._rulerRouteVertices[index]);
+                        self._rulerRouteVertices.splice(index, 1);
+
+                        var arr = self._rulerRouteLine.getLatLngs();
+                        arr.splice(index, 1);
+                        self._rulerRouteLine.setLatLngs(arr);
+                        self._rulerRouteLine.redraw();
+
+                        for (var i = 0; i < self._rulerRouteVertices.length; i++) {
+                            self._rulerRouteVertices[i]._vertexIndex = i;
+                        }
+
+                        self._updateDistances();
+                    }
+
+                    L.DomEvent.stopPropagation(e);
+                });
+
+            this._rulerRouteVertices.push(routeMarker);
+            routeMarker._vertexIndex = this._rulerRouteVertices.length - 1;
+
+            if (this._rulerRouteVertices.length > 1) {
+                var distance = this._computeDistance(this._rulerRouteVertices.length - 1);
+
+                var routeMarkerPopup = L.popup({
+                    autoClose: false,
+                    autoPan: false,
+                    closeOnClick: false,
+                    offset: L.point(0, 0),
+                    className: this.options.markerPopupClassName
+                })
+                    .setContent(this._formatDistance(distance));
+
+                routeMarker.bindPopup(routeMarkerPopup);
+            }
+
+            if (this._rulerRouteLine == null) {
+                this._rulerRouteLine = L.polyline([point], {
+                    color: 'red',
+                    weight: 2
+                })
+                    .on('click', function (e) {
+                        // TODO: add vertex
+                        L.DomEvent.stopPropagation(e);
+                    })
+                    .addTo(this._map);
+            }
+            else {
+                this._rulerRouteLine.addLatLng(point);
+            }
+
+            routeMarker.addTo(this._map);
+
+            if (this._rulerRouteVertices.length > 1) {
+                for (var i = 0; i < this._rulerRouteVertices.length - 1; i++) {
+                    if (!this._rulerRouteVertices[i]._wasClicked) {
+                        this._rulerRouteVertices[i].closePopup();
+                    }
                 }
 
-                L.DomEvent.stopPropagation(ev);
+                routeMarker.openPopup();
             }
+
+            L.DomEvent.stopPropagation(ev);
         },
 
         _removeMapObjects: function () {

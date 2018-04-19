@@ -1,7 +1,10 @@
 (function () {
     'use strict';
 
-    // TODO: check presence of L.EasyButton 
+    // Check presence of L.EasyButton 
+    if (typeof L.easyButton !== 'function') {
+        throw 'L.InteractivePathRuler requires Leaflet.EasyButton (https://github.com/CliffCloud/Leaflet.EasyButton)';
+    }
 
     L.InteractivePathRuler = L.Class.extend({
         _map: null,

@@ -4,6 +4,7 @@ Requires [Leaflet.EasyButton](https://github.com/CliffCloud/Leaflet.EasyButton) 
 
 ### How it looks in action
 Check the [demo page](https://htmlpreview.github.io/?https://github.com/apdevelop/leaflet-interactive-path-ruler/blob/master/index.html) to see it in action.
+
 ![Ruler in action](https://github.com/apdevelop/leaflet-interactive-path-ruler/blob/master/Docs/ruler-in-action.gif)
 
 ### Sample usage
@@ -22,7 +23,7 @@ L.interactivePathRuler(map, {
     buttonTitleOn: 'Turn ruler off',		// Button tooltip text in 'on' state
     buttonBackgroundColorOff: 'white',		// Button background color in 'off' state
     buttonBackgroundColorOn: 'orange',		// Button background color in 'on' state
-    markerPopupClassName: '',			// Custom CSS class name for popup [Popup options className](http://leafletjs.com/reference-1.3.0.html#popup-classname)
+    markerPopupClassName: '',			// Custom CSS class name for popup
     decimalSeparator: '.',			// Used to format distance values in popups
     unitNameMeter: 'M',				// Unit name for distance values expressed in meters
     unitNameKilometer: 'KM'			// Used to format distance values expressed in kilometers

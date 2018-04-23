@@ -22,6 +22,8 @@
             buttonTitleOn: 'Turn ruler off',
             buttonBackgroundColorOff: 'white',
             buttonBackgroundColorOn: 'orange',
+            rulerLineColor: 'red',
+            rulerLineWeight: 3,
             markerPopupClassName: '',
             decimalSeparator: '.',
             unitNameMeter: 'm',
@@ -64,18 +66,9 @@
             return this._rulerButton;
         },
 
-        _mapClickHandler: function (ev) {
-            // TODO: There is Chrome issue with unwanted map click event on dragend https://github.com/Leaflet/Leaflet/issues/6112 - not fixed
-            // Workaround
-            var now = (new Date()).getTime();
-            var delta = now - this._dragEndTime;
-            if (delta < 50) {
-                return;
-            }
-
-            var point = ev.latlng;
-
+        _createRouteMarker: function (point) {
             var self = this;
+
             var routeMarker = L.marker(point, {
                 icon: L.divIcon({
                     iconSize: [20, 20]
@@ -116,49 +109,107 @@
                         self._map.removeLayer(self._rulerRouteVertices[index]);
                         self._rulerRouteVertices.splice(index, 1);
 
+                        // Remove vertex from route line
                         var arr = self._rulerRouteLine.getLatLngs();
                         arr.splice(index, 1);
                         self._rulerRouteLine.setLatLngs(arr);
                         self._rulerRouteLine.redraw();
 
-                        for (var i = 0; i < self._rulerRouteVertices.length; i++) {
-                            self._rulerRouteVertices[i]._vertexIndex = i;
-                        }
-
+                        self._updateIndexes();
                         self._updateDistances();
                     }
 
                     L.DomEvent.stopPropagation(e);
                 });
 
+            routeMarker.bindPopup(L.popup({
+                autoClose: false,
+                autoPan: false,
+                closeOnClick: false,
+                offset: L.point(0, 0),
+                className: this.options.markerPopupClassName
+            }));
+
+            return routeMarker;
+        },
+
+        _createRulerRouteLine: function (initialPoint) {
+            var self = this;
+
+            return L.polyline([initialPoint], {
+                color: this.options.rulerLineColor,
+                weight: this.options.rulerLineWeight
+            })
+                .on('click', function (e) {
+                    // Find clicked segment by min distance from clicked point to segment
+                    var vertices = self._rulerRouteLine.getLatLngs();
+                    if (vertices.length >= 2) {
+                        var point = e.latlng;
+                        var segment = self._findNearestSegment(point, vertices);
+
+                        // Add vertex to route line
+                        vertices.splice(segment.index1 + 1, 0, point);
+                        self._rulerRouteLine.setLatLngs(vertices);
+                        self._rulerRouteLine.redraw();
+
+                        var routeMarker = self._createRouteMarker(point).addTo(this._map);
+                        self._rulerRouteVertices.splice(segment.index1 + 1, 0, routeMarker);
+                        self._updateIndexes();
+                        self._updateDistances();
+                    }
+
+                    L.DomEvent.stopPropagation(e);
+                });
+        },
+
+        _updateIndexes: function () {
+            for (var i = 0; i < this._rulerRouteVertices.length; i++) {
+                this._rulerRouteVertices[i]._vertexIndex = i;
+            }
+        },
+
+        _findNearestSegment: function (point, vertices) {
+            var minIndex = null;
+            var minDistance = Number.MAX_VALUE;
+            var projectedPoint = this._map.project(point);
+            for (var i = 0; i < vertices.length - 1; i++) {
+                var p1 = this._map.project(vertices[i]);
+                var p2 = this._map.project(vertices[i + 1]);
+                var distance = L.LineUtil.pointToSegmentDistance(projectedPoint, p1, p2);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    minIndex = i;
+                }
+            }
+
+            return {
+                index1: minIndex,
+                index2: minIndex + 1,
+            }
+        },
+
+        _mapClickHandler: function (ev) {
+            // TODO: There is Chrome issue with unwanted map click event on dragend https://github.com/Leaflet/Leaflet/issues/6112 - not fixed
+            // Workaround using time delta measurement
+            var now = (new Date()).getTime();
+            var delta = now - this._dragEndTime;
+            if (delta < 50) {
+                return;
+            }
+
+            var point = ev.latlng;
+            var routeMarker = this._createRouteMarker(point);
             this._rulerRouteVertices.push(routeMarker);
             routeMarker._vertexIndex = this._rulerRouteVertices.length - 1;
 
             if (this._rulerRouteVertices.length > 1) {
                 var distance = this._computeDistance(this._rulerRouteVertices.length - 1);
-
-                var routeMarkerPopup = L.popup({
-                    autoClose: false,
-                    autoPan: false,
-                    closeOnClick: false,
-                    offset: L.point(0, 0),
-                    className: this.options.markerPopupClassName
-                })
-                    .setContent(this._formatDistance(distance));
-
-                routeMarker.bindPopup(routeMarkerPopup);
+                routeMarker.getPopup().setContent(this._formatDistance(distance));
             }
 
+            // Add new vertex to route line or create line if needed
             if (this._rulerRouteLine == null) {
-                this._rulerRouteLine = L.polyline([point], {
-                    color: 'red',
-                    weight: 2
-                })
-                    .on('click', function (e) {
-                        // TODO: add vertex
-                        L.DomEvent.stopPropagation(e);
-                    })
-                    .addTo(this._map);
+                this._rulerRouteLine = this._createRulerRouteLine(point).addTo(this._map)
             }
             else {
                 this._rulerRouteLine.addLatLng(point);

@@ -23,6 +23,8 @@ L.interactivePathRuler(map, {
     buttonTitleOn: 'Turn ruler off',		// Button tooltip text in 'on' state
     buttonBackgroundColorOff: 'white',		// Button background color in 'off' state
     buttonBackgroundColorOn: 'orange',		// Button background color in 'on' state
+	rulerLineColor: 'red',			// Line stroke color
+    rulerLineWeight: 3,				// Line stroke width in pixels
     markerPopupClassName: '',			// Custom CSS class name for popup
     decimalSeparator: '.',			// Used to format distance values in popups
     unitNameMeter: 'M',				// Unit name for distance values expressed in meters
@@ -34,5 +36,6 @@ L.interactivePathRuler(map, {
 Now ruler button will be added to other map buttons.
 
 ### TODOs
-* More customization options
-* Add vertex on click on path line
+* More customization options for line/markers/popups
+* Easy adding vertex on path line (with click tolerance distance)
+* More measurement units

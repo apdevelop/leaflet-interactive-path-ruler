@@ -11,6 +11,8 @@ L.interactivePathRuler(map, {
     buttonIconOff: 'fa-ellipsis-h fa-lg',
     buttonIconOn: 'fa-ellipsis-h fa-lg',
     buttonBackgroundColorOn: 'green',
+    rulerLineColor: 'red',
+    rulerLineWeight: 3,
     decimalSeparator: '.',
     unitNameMeter: 'm',
     unitNameKilometer: 'km'

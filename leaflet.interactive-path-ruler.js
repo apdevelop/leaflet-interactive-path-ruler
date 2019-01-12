@@ -88,7 +88,7 @@
 
                 })
                 .on('dragend', function (e) {
-                    if ((e.target._vertexIndex == (self._rulerRouteVertices.length - 1)) || (e.target._wasClicked)) {
+                    if ((e.target._vertexIndex === (self._rulerRouteVertices.length - 1)) || (e.target._wasClicked)) {
                         e.target.openPopup();
                     }
 
@@ -99,7 +99,7 @@
                     L.DomEvent.stopPropagation(e);
                 })
                 .on('dblclick', function (e) {
-                    if (e.target._vertexIndex == 0) {
+                    if (e.target._vertexIndex === 0) {
                         // Remove entire path when click on first vertex
                         self._removeMapObjects();
                     }
@@ -184,8 +184,8 @@
 
             return {
                 index1: minIndex,
-                index2: minIndex + 1,
-            }
+                index2: minIndex + 1
+            };
         },
 
         _mapClickHandler: function (ev) {
@@ -208,8 +208,8 @@
             }
 
             // Add new vertex to route line or create line if needed
-            if (this._rulerRouteLine == null) {
-                this._rulerRouteLine = this._createRulerRouteLine(point).addTo(this._map)
+            if (this._rulerRouteLine === null) {
+                this._rulerRouteLine = this._createRulerRouteLine(point).addTo(this._map);
             }
             else {
                 this._rulerRouteLine.addLatLng(point);
@@ -299,6 +299,6 @@
 
     L.interactivePathRuler = function (map, options) {
         return new L.InteractivePathRuler(map, options);
-    }
+    };
 
 })();
